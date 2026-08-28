@@ -73,14 +73,13 @@ if not st.session_state.logged_in:
 
 else:
 
-    col_title, col_logout = st.columns([6, 1])
+    col1, col2 = st.columns([6, 1])
 
-    with col_logout:
+    with col2:
 
         if st.button("🚪 Đăng xuất"):
 
             st.session_state.logged_in = False
-
             st.rerun()
 
 
@@ -95,7 +94,7 @@ else:
 
 
         # =========================
-        # LẤY DANH SÁCH KHÁCH HÀNG
+        # DANH SÁCH KHÁCH HÀNG
         # =========================
 
         sql_khach_hang = """
@@ -116,7 +115,6 @@ else:
 
         data_khach_hang = cursor.fetchall()
 
-
         columns_khach_hang = [
             "Mã khách hàng",
             "Họ tên",
@@ -128,7 +126,6 @@ else:
             "Ngày tạo"
         ]
 
-
         df_khach_hang = pd.DataFrame(
             data_khach_hang,
             columns=columns_khach_hang
@@ -136,7 +133,7 @@ else:
 
 
         # =========================
-        # HIỂN THỊ MÃ KHÁCH HÀNG
+        # HIỂN THỊ MÃ KHÁCH HÀNG KH001
         # =========================
 
         if not df_khach_hang.empty:
@@ -148,7 +145,7 @@ else:
 
 
         # =========================
-        # LẤY DANH SÁCH LỊCH
+        # DANH SÁCH LỊCH HẸN
         # =========================
 
         sql_lich = """
@@ -173,7 +170,6 @@ else:
 
         data_lich = cursor.fetchall()
 
-
         columns_lich = [
             "Mã lịch",
             "Mã khách hàng",
@@ -187,7 +183,6 @@ else:
             "Ghi chú"
         ]
 
-
         df_lich = pd.DataFrame(
             data_lich,
             columns=columns_lich
@@ -195,7 +190,7 @@ else:
 
 
         # =========================
-        # HIỂN THỊ MÃ KHÁCH HÀNG TRONG LỊCH
+        # MÃ KHÁCH HÀNG TRONG LỊCH
         # =========================
 
         if not df_lich.empty:
@@ -205,10 +200,6 @@ else:
                 .apply(lambda x: f"KH{int(x):03d}")
             )
 
-
-        # =========================
-        # ĐÓNG DATABASE
-        # =========================
 
         cursor.close()
         conn.close()
@@ -224,16 +215,11 @@ else:
 
         col1, col2, col3, col4 = st.columns(4)
 
-
-        # Tổng khách hàng
-
         col1.metric(
             "👥 Tổng khách hàng",
             len(df_khach_hang)
         )
 
-
-        # Khách hàng mới
 
         if not df_khach_hang.empty:
 
@@ -244,21 +230,6 @@ else:
                 ]
             )
 
-        else:
-
-            so_khach_moi = 0
-
-
-        col2.metric(
-            "🆕 Khách hàng mới",
-            so_khach_moi
-        )
-
-
-        # Khách hàng cũ
-
-        if not df_khach_hang.empty:
-
             so_khach_cu = len(
                 df_khach_hang[
                     df_khach_hang["Loại khách hàng"]
@@ -268,19 +239,22 @@ else:
 
         else:
 
+            so_khach_moi = 0
             so_khach_cu = 0
 
+
+        col2.metric(
+            "🆕 Khách hàng mới",
+            so_khach_moi
+        )
 
         col3.metric(
             "🔄 Khách hàng quay lại",
             so_khach_cu
         )
 
-
-        # Tổng lịch hẹn
-
         col4.metric(
-            "📅 Lịch chăm sóc",
+            "📅 Tổng lịch hẹn",
             len(df_lich)
         )
 
@@ -291,18 +265,14 @@ else:
 
         st.divider()
 
-        st.subheader(
-            "👥 Danh sách khách hàng tiềm năng"
-        )
+        st.subheader("👥 Danh sách khách hàng tiềm năng")
 
 
         if not df_khach_hang.empty:
 
-            # Tìm kiếm khách hàng
             tim_kiem = st.text_input(
                 "🔎 Tìm kiếm theo tên hoặc số điện thoại"
             )
-
 
             df_hien_thi = df_khach_hang.copy()
 
@@ -339,7 +309,7 @@ else:
         else:
 
             st.info(
-                "📭 Chưa có khách hàng nào trong hệ thống."
+                "📭 Chưa có khách hàng nào."
             )
 
 
@@ -361,6 +331,125 @@ else:
                 use_container_width=True,
                 hide_index=True
             )
+
+
+            # =========================
+            # CẬP NHẬT TRẠNG THÁI
+            # =========================
+
+            st.divider()
+
+            st.subheader(
+                "✏️ Cập nhật trạng thái lịch hẹn"
+            )
+
+            # Danh sách mã lịch
+            danh_sach_ma_lich = df_lich[
+                "Mã lịch"
+            ].tolist()
+
+            ma_lich_chon = st.selectbox(
+                "Chọn lịch hẹn cần cập nhật",
+                danh_sach_ma_lich
+            )
+
+
+            # Tìm thông tin lịch được chọn
+            lich_hien_tai = df_lich[
+                df_lich["Mã lịch"] == ma_lich_chon
+            ].iloc[0]
+
+
+            st.info(
+                f"👤 Khách hàng: {lich_hien_tai['Họ tên']} | "
+                f"🆔 Mã khách hàng: {lich_hien_tai['Mã khách hàng']} | "
+                f"📌 Trạng thái hiện tại: "
+                f"{lich_hien_tai['Trạng thái']}"
+            )
+
+
+            danh_sach_trang_thai = [
+                "Chưa liên hệ",
+                "Đã liên hệ",
+                "Đã tư vấn",
+                "Hẹn lại",
+                "Hoàn thành"
+            ]
+
+
+            # Xác định trạng thái hiện tại
+            trang_thai_hien_tai = (
+                lich_hien_tai["Trạng thái"]
+            )
+
+            if trang_thai_hien_tai in danh_sach_trang_thai:
+
+                vi_tri_hien_tai = (
+                    danh_sach_trang_thai.index(
+                        trang_thai_hien_tai
+                    )
+                )
+
+            else:
+
+                vi_tri_hien_tai = 0
+
+
+            trang_thai_moi = st.selectbox(
+                "Chọn trạng thái mới",
+                danh_sach_trang_thai,
+                index=vi_tri_hien_tai
+            )
+
+
+            if st.button(
+                "💾 Cập nhật trạng thái"
+            ):
+
+                try:
+
+                    conn_update = get_connection()
+
+                    cursor_update = (
+                        conn_update.cursor()
+                    )
+
+
+                    sql_update = """
+                    UPDATE lich_cham_soc
+                    SET trang_thai = %s
+                    WHERE ma_lich = %s
+                    """
+
+
+                    cursor_update.execute(
+                        sql_update,
+                        (
+                            trang_thai_moi,
+                            ma_lich_chon
+                        )
+                    )
+
+
+                    conn_update.commit()
+
+                    cursor_update.close()
+                    conn_update.close()
+
+
+                    st.success(
+                        "🎉 Cập nhật trạng thái thành công!"
+                    )
+
+                    st.rerun()
+
+
+                except Exception as e:
+
+                    st.error(
+                        f"❌ Lỗi cập nhật trạng thái: {e}"
+                    )
+
 
         else:
 
