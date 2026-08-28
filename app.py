@@ -35,9 +35,8 @@ if "da_kiem_tra" not in st.session_state:
 if "khach_moi" not in st.session_state:
     st.session_state.khach_moi = False
 
-if "ma_lich" not in st.session_state:
-    st.session_state.ma_lich = None
-
+if "tao_lich_moi" not in st.session_state:
+    st.session_state.tao_lich_moi = False
 
 # =========================
 # HÀM KIỂM TRA KHÁCH HÀNG
@@ -313,11 +312,13 @@ if st.session_state.ma_khach_hang is not None:
 
     st.subheader("📅 Lịch hẹn chăm sóc / tái tư vấn")
 
-    try:
+    # ==========================================
+    # LẤY DANH SÁCH LỊCH ĐÃ CÓ
+    # ==========================================
 
-        # ==========================================
-        # LẤY TẤT CẢ LỊCH CỦA KHÁCH HÀNG
-        # ==========================================
+    danh_sach_lich = []
+
+    try:
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -346,71 +347,51 @@ if st.session_state.ma_khach_hang is not None:
         cursor.close()
         conn.close()
 
+    except Exception as e:
 
-        # ==========================================
-        # HIỂN THỊ CÁC LỊCH ĐÃ ĐĂNG KÝ
-        # ==========================================
-
-        if danh_sach_lich:
-
-            st.success("📋 Lịch hẹn đã đăng ký")
-
-            for i, lich in enumerate(danh_sach_lich):
-
-                st.markdown(
-                    f"### 🔒 Lịch hẹn lần {i + 1}"
-                )
-
-                st.write(
-                    f"**📆 Ngày hẹn:** {lich[1]}"
-                )
-
-                st.write(
-                    f"**🕐 Giờ hẹn:** {lich[2]}"
-                )
-
-                st.write(
-                    f"**💬 Nội dung tư vấn:** {lich[3]}"
-                )
-
-                st.write(
-                    f"**📞 Hình thức liên hệ:** {lich[4]}"
-                )
-
-                st.write(
-                    f"**📌 Trạng thái:** {lich[5]}"
-                )
-
-                st.write(
-                    f"**📝 Ghi chú:** {lich[6]}"
-                )
-
-                st.success(
-                    "✅ Lịch hẹn đã được đăng ký thành công"
-                )
-
-                st.divider()
+        st.error(f"❌ Lỗi khi tải lịch hẹn: {e}")
 
 
-            # ==========================================
-            # NÚT TẠO LỊCH HẸN MỚI
-            # ==========================================
+    # ==========================================
+    # HIỂN THỊ LỊCH ĐÃ TẠO
+    # ==========================================
 
-            if not st.session_state.tao_lich_moi:
+    if danh_sach_lich:
 
-                if st.button(
-                    "➕ Tạo lịch hẹn mới / tái hẹn"
-                ):
+        st.success("📋 Lịch hẹn đã đăng ký")
 
-                    st.session_state.tao_lich_moi = True
-                    st.rerun()
+        for i, lich in enumerate(danh_sach_lich):
+
+            st.markdown(f"### 🔒 Lịch hẹn lần {i + 1}")
+
+            st.write(f"**📆 Ngày hẹn:** {lich[1]}")
+            st.write(f"**🕐 Giờ hẹn:** {lich[2]}")
+            st.write(f"**💬 Nội dung tư vấn:** {lich[3]}")
+            st.write(f"**📞 Hình thức liên hệ:** {lich[4]}")
+            st.write(f"**📌 Trạng thái:** {lich[5]}")
+            st.write(f"**📝 Ghi chú:** {lich[6]}")
+
+            st.success("✅ Lịch hẹn đã được đăng ký thành công")
+
+            st.divider()
 
 
-        # ==========================================
-        # CHƯA CÓ LỊCH
-        # ==========================================
+        # NÚT TÁI HẸN
+        if not st.session_state.tao_lich_moi:
 
-        else:
+            if st.button("➕ Tạo lịch hẹn mới / tái hẹn"):
+
+                st.session_state.tao_lich_moi = True
+                st.rerun()
+
+
+    # ==========================================
+    # CHƯA CÓ LỊCH
+    # ==========================================
+
+    else:
+
+        if not st.session_state.tao_lich_moi:
 
             st.info(
                 "📅 Khách hàng chưa có lịch hẹn. Vui lòng tạo lịch hẹn."
@@ -419,15 +400,8 @@ if st.session_state.ma_khach_hang is not None:
             st.session_state.tao_lich_moi = True
 
 
-    except Exception as e:
-
-        st.error(
-            f"❌ Lỗi khi tải lịch hẹn: {e}"
-        )
-
-
     # ==========================================
-    # FORM TẠO LỊCH HẸN MỚI
+    # FORM TẠO LỊCH MỚI
     # ==========================================
 
     if st.session_state.tao_lich_moi:
@@ -480,7 +454,7 @@ if st.session_state.ma_khach_hang is not None:
 
 
         # ==========================================
-        # LƯU LỊCH MỚI
+        # LƯU LỊCH
         # ==========================================
 
         if submit_lich:
@@ -490,7 +464,7 @@ if st.session_state.ma_khach_hang is not None:
                 conn = get_connection()
                 cursor = conn.cursor()
 
-                sql = """
+                sql_them_lich = """
                 INSERT INTO lich_cham_soc
                 (
                     ma_khach_hang,
@@ -505,7 +479,7 @@ if st.session_state.ma_khach_hang is not None:
                 """
 
                 cursor.execute(
-                    sql,
+                    sql_them_lich,
                     (
                         st.session_state.ma_khach_hang,
                         ngay_hen,
@@ -522,8 +496,7 @@ if st.session_state.ma_khach_hang is not None:
                 cursor.close()
                 conn.close()
 
-
-                # TẮT FORM SAU KHI LƯU
+                # Đóng form
                 st.session_state.tao_lich_moi = False
 
                 st.success(
@@ -532,9 +505,8 @@ if st.session_state.ma_khach_hang is not None:
 
                 st.rerun()
 
-
             except Exception as e:
 
                 st.error(
-                    f"❌ Lỗi khi lưu lịch hẹn: {e}"
+                    f"❌ Lỗi khi tạo lịch hẹn: {e}"
                 )
