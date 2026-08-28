@@ -400,113 +400,111 @@ if st.session_state.ma_khach_hang is not None:
             st.session_state.tao_lich_moi = True
 
 
+  # ==========================================
+# FORM TẠO LỊCH MỚI
+# ==========================================
+
+if st.session_state.tao_lich_moi:
+
+    st.subheader("➕ Tạo lịch hẹn mới")
+
+    with st.form("form_lich_cham_soc"):
+
+        ngay_hen = st.date_input(
+            "Ngày hẹn"
+        )
+
+        gio_hen = st.time_input(
+            "Giờ hẹn"
+        )
+
+        noi_dung_tu_van = st.text_input(
+            "Nội dung tư vấn",
+            placeholder="Ví dụ: Tư vấn vay vốn, gửi tiết kiệm..."
+        )
+
+        hinh_thuc_lien_he = st.selectbox(
+            "Hình thức liên hệ",
+            [
+                "Gọi điện",
+                "Gặp trực tiếp",
+                "Tin nhắn",
+                "Email"
+            ]
+        )
+
+        # Trạng thái mặc định, người dùng không thể thay đổi
+        st.text_input(
+            "Trạng thái",
+            value="Chưa liên hệ",
+            disabled=True
+        )
+
+        trang_thai = "Chưa liên hệ"
+
+        ghi_chu_lich = st.text_area(
+            "Ghi chú lịch hẹn"
+        )
+
+        submit_lich = st.form_submit_button(
+            "💾 Lưu và chốt lịch hẹn"
+        )
+
+
     # ==========================================
-    # FORM TẠO LỊCH MỚI
+    # LƯU LỊCH
     # ==========================================
 
-    if st.session_state.tao_lich_moi:
+    if submit_lich:
 
-        st.subheader("➕ Tạo lịch hẹn mới")
+        try:
 
-        with st.form("form_lich_cham_soc"):
+            conn = get_connection()
+            cursor = conn.cursor()
 
-            ngay_hen = st.date_input(
-                "Ngày hẹn"
+            sql_them_lich = """
+            INSERT INTO lich_cham_soc
+            (
+                ma_khach_hang,
+                ngay_hen,
+                gio_hen,
+                noi_dung_tu_van,
+                hinh_thuc_lien_he,
+                trang_thai,
+                ghi_chu
             )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
 
-            gio_hen = st.time_input(
-                "Giờ hẹn"
-            )
-
-            noi_dung_tu_van = st.text_input(
-                "Nội dung tư vấn",
-                placeholder="Ví dụ: Tư vấn vay vốn, gửi tiết kiệm..."
-            )
-
-            hinh_thuc_lien_he = st.selectbox(
-                "Hình thức liên hệ",
-                [
-                    "Gọi điện",
-                    "Gặp trực tiếp",
-                    "Tin nhắn",
-                    "Email"
-                ]
-            )
-
-            trang_thai = st.selectbox(
-                "Trạng thái",
-                [
-                    "Chưa liên hệ",
-                    "Đã liên hệ",
-                    "Đã tư vấn",
-                    "Hẹn lại",
-                    "Hoàn thành"
-                ]
-            )
-
-            ghi_chu_lich = st.text_area(
-                "Ghi chú lịch hẹn"
-            )
-
-            submit_lich = st.form_submit_button(
-                "💾 Lưu và chốt lịch hẹn"
-            )
-
-
-        # ==========================================
-        # LƯU LỊCH
-        # ==========================================
-
-        if submit_lich:
-
-            try:
-
-                conn = get_connection()
-                cursor = conn.cursor()
-
-                sql_them_lich = """
-                INSERT INTO lich_cham_soc
+            cursor.execute(
+                sql_them_lich,
                 (
-                    ma_khach_hang,
+                    st.session_state.ma_khach_hang,
                     ngay_hen,
                     gio_hen,
                     noi_dung_tu_van,
                     hinh_thuc_lien_he,
                     trang_thai,
-                    ghi_chu
+                    ghi_chu_lich
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """
+            )
 
-                cursor.execute(
-                    sql_them_lich,
-                    (
-                        st.session_state.ma_khach_hang,
-                        ngay_hen,
-                        gio_hen,
-                        noi_dung_tu_van,
-                        hinh_thuc_lien_he,
-                        trang_thai,
-                        ghi_chu_lich
-                    )
-                )
+            conn.commit()
 
-                conn.commit()
+            cursor.close()
+            conn.close()
 
-                cursor.close()
-                conn.close()
+            # Đóng form sau khi lưu
+            st.session_state.tao_lich_moi = False
 
-                # Đóng form
-                st.session_state.tao_lich_moi = False
+            st.success(
+                "🎉 Đã đăng ký và chốt lịch hẹn thành công!"
+            )
 
-                st.success(
-                    "🎉 Đã đăng ký và chốt lịch hẹn thành công!"
-                )
+            st.rerun()
 
-                st.rerun()
+        except Exception as e:
 
-            except Exception as e:
-
-                st.error(
-                    f"❌ Lỗi khi tạo lịch hẹn: {e}"
-                )
+            st.error(
+                f"❌ Lỗi khi tạo lịch hẹn: {e}"
+            )
