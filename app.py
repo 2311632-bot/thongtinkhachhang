@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from database import get_connection
 
 
@@ -14,48 +13,261 @@ st.set_page_config(
 )
 
 st.title("👥 QUẢN LÝ KHÁCH HÀNG TIỀM NĂNG")
-st.write("Hệ thống tự động nhận diện khách hàng mới và khách hàng quay lại.")
+
+st.write(
+    "Hệ thống tự động nhận diện khách hàng mới và khách hàng quay lại."
+)
 
 
 # =========================
 # KHỞI TẠO SESSION
 # =========================
 
-if "thong_tin_khach" not in st.session_state:
-    st.session_state.thong_tin_khach = None
+if "ma_khach_hang" not in st.session_state:
+    st.session_state.ma_khach_hang = None
+
+if "khach_hang" not in st.session_state:
+    st.session_state.khach_hang = None
+
+if "da_kiem_tra" not in st.session_state:
+    st.session_state.da_kiem_tra = False
+
+if "khach_moi" not in st.session_state:
+    st.session_state.khach_moi = False
 
 
 # =========================
-# NHẬP SỐ ĐIỆN THOẠI
+# HÀM KIỂM TRA KHÁCH HÀNG
 # =========================
 
-st.subheader("🔎 Kiểm tra khách hàng")
+def tim_khach_hang(so_dien_thoai):
 
-so_dien_thoai_tim = st.text_input(
-    "Nhập số điện thoại khách hàng"
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    sql = """
+    SELECT
+        ma_khach_hang,
+        ho_ten,
+        so_dien_thoai,
+        khu_vuc,
+        loai_khach_hang,
+        nhu_cau,
+        ghi_chu
+    FROM khach_hang_tiem_nang
+    WHERE so_dien_thoai = %s
+    """
+
+    cursor.execute(sql, (so_dien_thoai,))
+
+    khach_hang = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    return khach_hang
+
+
+# =========================
+# KIỂM TRA SỐ ĐIỆN THOẠI
+# =========================
+
+st.subheader("🔎 Kiểm tra thông tin khách hàng")
+
+so_dien_thoai = st.text_input(
+    "Nhập số điện thoại khách hàng",
+    key="so_dien_thoai_input"
 )
 
-kiem_tra = st.button("🔎 Kiểm tra thông tin")
+if st.button("🔎 Kiểm tra khách hàng"):
 
+    if not so_dien_thoai:
 
-# =========================
-# KIỂM TRA KHÁCH HÀNG
-# =========================
-
-if kiem_tra:
-
-    if not so_dien_thoai_tim:
-
-        st.warning("Vui lòng nhập số điện thoại.")
+        st.warning("⚠️ Vui lòng nhập số điện thoại.")
 
     else:
 
         try:
 
-            conn = get_connection()
-            cursor = conn.cursor()
+            khach_hang = tim_khach_hang(so_dien_thoai)
 
-            sql = """
+            st.session_state.da_kiem_tra = True
+
+            # -------------------------
+            # KHÁCH HÀNG ĐÃ TỒN TẠI
+            # -------------------------
+
+            if khach_hang:
+
+                st.session_state.khach_moi = False
+                st.session_state.khach_hang = khach_hang
+                st.session_state.ma_khach_hang = khach_hang[0]
+
+                # Cập nhật thành khách hàng tiềm năng
+                conn = get_connection()
+                cursor = conn.cursor()
+
+                sql_update = """
+                UPDATE khach_hang_tiem_nang
+                SET loai_khach_hang = 'Khách hàng cũ'
+                WHERE ma_khach_hang = %s
+                """
+
+                cursor.execute(
+                    sql_update,
+                    (khach_hang[0],)
+                )
+
+                conn.commit()
+
+                cursor.close()
+                conn.close()
+
+                st.success(
+                    "🎯 Đã tìm thấy khách hàng! Khách hàng quay lại."
+                )
+
+            # -------------------------
+            # KHÁCH HÀNG MỚI
+            # -------------------------
+
+            else:
+
+                st.session_state.khach_moi = True
+                st.session_state.khach_hang = None
+                st.session_state.ma_khach_hang = None
+
+                st.info(
+                    "✨ Đây là khách hàng mới. Vui lòng nhập thông tin bên dưới."
+                )
+
+        except Exception as e:
+
+            st.error(f"❌ Lỗi: {e}")
+
+
+# =====================================================
+# FORM KHÁCH HÀNG MỚI
+# =====================================================
+
+if (
+    st.session_state.da_kiem_tra
+    and st.session_state.khach_moi
+    and st.session_state.ma_khach_hang is None
+):
+
+    st.divider()
+
+    st.subheader("🆕 Thông tin khách hàng mới")
+
+    with st.form("form_khach_hang_moi"):
+
+        ho_ten = st.text_input("Họ và tên")
+
+        khu_vuc = st.text_input("Khu vực")
+
+        nhu_cau = st.text_input(
+            "Nhu cầu khách hàng",
+            placeholder="Ví dụ: Vay vốn, gửi tiết kiệm..."
+        )
+
+        ghi_chu = st.text_area("Ghi chú")
+
+        submit_khach_moi = st.form_submit_button(
+            "💾 Lưu thông tin khách hàng"
+        )
+
+
+    if submit_khach_moi:
+
+        if not ho_ten:
+
+            st.warning("⚠️ Vui lòng nhập họ tên.")
+
+        else:
+
+            try:
+
+                conn = get_connection()
+                cursor = conn.cursor()
+
+                sql = """
+                INSERT INTO khach_hang_tiem_nang
+                (
+                    ho_ten,
+                    so_dien_thoai,
+                    khu_vuc,
+                    loai_khach_hang,
+                    nhu_cau,
+                    ghi_chu
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+
+                cursor.execute(
+                    sql,
+                    (
+                        ho_ten,
+                        so_dien_thoai,
+                        khu_vuc,
+                        "Khách hàng mới",
+                        nhu_cau,
+                        ghi_chu
+                    )
+                )
+
+                conn.commit()
+
+                # Lấy mã khách hàng vừa tạo
+                ma_khach_hang_moi = cursor.lastrowid
+
+                cursor.close()
+                conn.close()
+
+                # LƯU VÀO SESSION
+                st.session_state.ma_khach_hang = ma_khach_hang_moi
+
+                st.session_state.khach_hang = (
+                    ma_khach_hang_moi,
+                    ho_ten,
+                    so_dien_thoai,
+                    khu_vuc,
+                    "Khách hàng mới",
+                    nhu_cau,
+                    ghi_chu
+                )
+
+                st.session_state.khach_moi = False
+
+                st.success(
+                    "🎉 Đã lưu khách hàng thành công!"
+                )
+
+                st.rerun()
+
+            except Exception as e:
+
+                st.error(f"❌ Lỗi khi lưu khách hàng: {e}")
+
+
+# =====================================================
+# HIỂN THỊ KHÁCH HÀNG
+# =====================================================
+
+if st.session_state.ma_khach_hang is not None:
+
+    st.divider()
+
+    st.subheader("👤 Thông tin khách hàng")
+
+    # Lấy thông tin mới nhất từ database
+    try:
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
             SELECT
                 ma_khach_hang,
                 ho_ten,
@@ -65,116 +277,38 @@ if kiem_tra:
                 nhu_cau,
                 ghi_chu
             FROM khach_hang_tiem_nang
-            WHERE so_dien_thoai = %s
-            """
-
-            cursor.execute(
-                sql,
-                (so_dien_thoai_tim,)
-            )
-
-            khach_hang = cursor.fetchone()
-
-            cursor.close()
-            conn.close()
-
-
-            # =========================
-            # KHÁCH HÀNG ĐÃ TỒN TẠI
-            # =========================
-
-            if khach_hang:
-
-                st.session_state.thong_tin_khach = khach_hang
-
-                st.success(
-                    "🎯 Đã tìm thấy khách hàng! Đây là khách hàng quay lại."
-                )
-
-            # =========================
-            # KHÁCH HÀNG MỚI
-            # =========================
-
-            else:
-
-                st.session_state.thong_tin_khach = None
-
-                st.info(
-                    "✨ Đây là khách hàng mới. Vui lòng nhập thông tin khách hàng."
-                )
-
-        except Exception as e:
-
-            st.error(f"Lỗi: {e}")
-
-
-# =====================================================
-# NẾU LÀ KHÁCH HÀNG CŨ / QUAY LẠI
-# =====================================================
-
-if st.session_state.thong_tin_khach:
-
-    khach = st.session_state.thong_tin_khach
-
-    ma_khach_hang = khach[0]
-    ho_ten_cu = khach[1]
-    so_dien_thoai_cu = khach[2]
-    khu_vuc_cu = khach[3]
-    loai_cu = khach[4]
-    nhu_cau_cu = khach[5]
-    ghi_chu_cu = khach[6]
-
-    st.divider()
-
-    st.subheader("👤 Thông tin khách hàng")
-
-    st.write(f"**Họ tên:** {ho_ten_cu}")
-    st.write(f"**Số điện thoại:** {so_dien_thoai_cu}")
-    st.write(f"**Khu vực:** {khu_vuc_cu}")
-    st.write(f"**Nhu cầu:** {nhu_cau_cu}")
-
-    st.success(
-        "⭐ Khách hàng đã quay lại. Hệ thống xác định là KHÁCH HÀNG TIỀM NĂNG."
-    )
-
-
-    # =========================
-    # CẬP NHẬT THÀNH KHÁCH TIỀM NĂNG
-    # =========================
-
-    try:
-
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        sql_update = """
-        UPDATE khach_hang_tiem_nang
-        SET loai_khach_hang = 'Khách hàng cũ'
-        WHERE ma_khach_hang = %s
-        """
-
-        cursor.execute(
-            sql_update,
-            (ma_khach_hang,)
+            WHERE ma_khach_hang = %s
+            """,
+            (st.session_state.ma_khach_hang,)
         )
 
-        conn.commit()
+        khach = cursor.fetchone()
 
         cursor.close()
         conn.close()
 
+        if khach:
+
+            st.write(f"**Họ tên:** {khach[1]}")
+            st.write(f"**Số điện thoại:** {khach[2]}")
+            st.write(f"**Khu vực:** {khach[3]}")
+            st.write(f"**Loại khách hàng:** {khach[4]}")
+            st.write(f"**Nhu cầu:** {khach[5]}")
+
     except Exception as e:
 
-        st.error(f"Lỗi cập nhật: {e}")
+        st.error(f"❌ Lỗi: {e}")
 
 
-    # =========================
-    # TẠO LỊCH CHĂM SÓC
-    # =========================
+# =====================================================
+# LỊCH HẸN / TÁI TƯ VẤN
+# =====================================================
+
+if st.session_state.ma_khach_hang is not None:
 
     st.divider()
 
-    st.subheader("📅 Lịch chăm sóc / tái tư vấn")
+    st.subheader("📅 Lịch hẹn chăm sóc / tái tư vấn")
 
     with st.form("form_lich_cham_soc"):
 
@@ -187,7 +321,8 @@ if st.session_state.thong_tin_khach:
         )
 
         noi_dung_tu_van = st.text_input(
-            "Nội dung tư vấn"
+            "Nội dung tư vấn",
+            placeholder="Ví dụ: Tư vấn vay vốn, gửi tiết kiệm..."
         )
 
         hinh_thuc_lien_he = st.selectbox(
@@ -212,11 +347,11 @@ if st.session_state.thong_tin_khach:
         )
 
         ghi_chu_lich = st.text_area(
-            "Ghi chú"
+            "Ghi chú lịch hẹn"
         )
 
         submit_lich = st.form_submit_button(
-            "📅 Lưu lịch chăm sóc"
+            "📅 Lưu lịch hẹn / tái tư vấn"
         )
 
 
@@ -244,7 +379,7 @@ if st.session_state.thong_tin_khach:
             cursor.execute(
                 sql,
                 (
-                    ma_khach_hang,
+                    st.session_state.ma_khach_hang,
                     ngay_hen,
                     gio_hen,
                     noi_dung_tu_van,
@@ -259,88 +394,10 @@ if st.session_state.thong_tin_khach:
             cursor.close()
             conn.close()
 
-            st.success("🎉 Đã lưu lịch chăm sóc!")
+            st.success(
+                "🎉 Đã lưu lịch chăm sóc / tái tư vấn thành công!"
+            )
 
         except Exception as e:
 
-            st.error(f"Lỗi: {e}")
-
-
-# =====================================================
-# KHÁCH HÀNG MỚI
-# =====================================================
-
-elif kiem_tra and not st.session_state.thong_tin_khach:
-
-    st.divider()
-
-    st.subheader("🆕 Đăng ký khách hàng mới")
-
-    with st.form("form_khach_hang_moi"):
-
-        ho_ten = st.text_input("Họ và tên")
-
-        khu_vuc = st.text_input("Khu vực")
-
-        nhu_cau = st.text_input(
-            "Nhu cầu khách hàng",
-            placeholder="Ví dụ: Vay vốn, gửi tiết kiệm..."
-        )
-
-        ghi_chu = st.text_area("Ghi chú")
-
-        submit_khach_moi = st.form_submit_button(
-            "💾 Lưu khách hàng"
-        )
-
-
-    if submit_khach_moi:
-
-        if not ho_ten:
-
-            st.warning("Vui lòng nhập họ tên.")
-
-        else:
-
-            try:
-
-                conn = get_connection()
-                cursor = conn.cursor()
-
-                sql = """
-                INSERT INTO khach_hang_tiem_nang
-                (
-                    ho_ten,
-                    so_dien_thoai,
-                    khu_vuc,
-                    loai_khach_hang,
-                    nhu_cau,
-                    ghi_chu
-                )
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """
-
-                cursor.execute(
-                    sql,
-                    (
-                        ho_ten,
-                        so_dien_thoai_tim,
-                        khu_vuc,
-                        "Khách hàng mới",
-                        nhu_cau,
-                        ghi_chu
-                    )
-                )
-
-                conn.commit()
-
-                cursor.close()
-                conn.close()
-
-                st.success(
-                    "🎉 Đã lưu khách hàng mới thành công!"
-                )
-
-            except Exception as e:
-
-                st.error(f"Lỗi: {e}")
+            st.error(f"❌ Lỗi khi lưu lịch: {e}")
