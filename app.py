@@ -35,6 +35,9 @@ if "da_kiem_tra" not in st.session_state:
 if "khach_moi" not in st.session_state:
     st.session_state.khach_moi = False
 
+if "ma_lich" not in st.session_state:
+    st.session_state.ma_lich = None
+
 
 # =========================
 # HÀM KIỂM TRA KHÁCH HÀNG
