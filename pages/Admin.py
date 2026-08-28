@@ -8,15 +8,14 @@ from database import get_connection
 # =========================
 
 st.set_page_config(
-    page_title="Trang quản trị SmartCare CRM",
+    page_title="Trang quản trị",
     page_icon="🔐",
     layout="wide"
 )
 
-st.title("🔐 SMARTCARE CRM - TRANG QUẢN TRỊ")
-
+st.title("🔐 TRANG QUẢN TRỊ")
 st.write(
-    "Quản lý khách hàng tiềm năng và theo dõi lịch chăm sóc / tái tư vấn."
+    "Quản lý khách hàng tiềm năng và lịch chăm sóc khách hàng."
 )
 
 
@@ -29,24 +28,22 @@ PASSWORD = "123456"
 
 
 # =========================
-# SESSION ĐĂNG NHẬP
+# KHỞI TẠO SESSION
 # =========================
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 
-# =====================================================
+# =========================
 # FORM ĐĂNG NHẬP
-# =====================================================
+# =========================
 
 if not st.session_state.logged_in:
 
     st.subheader("🔑 Đăng nhập quản trị")
 
-    username = st.text_input(
-        "Tên đăng nhập"
-    )
+    username = st.text_input("Tên đăng nhập")
 
     password = st.text_input(
         "Mật khẩu",
@@ -59,9 +56,7 @@ if not st.session_state.logged_in:
 
             st.session_state.logged_in = True
 
-            st.success(
-                "✅ Đăng nhập thành công!"
-            )
+            st.success("✅ Đăng nhập thành công!")
 
             st.rerun()
 
@@ -72,29 +67,26 @@ if not st.session_state.logged_in:
             )
 
 
-# =====================================================
+# =========================
 # TRANG QUẢN TRỊ
-# =====================================================
+# =========================
 
 else:
 
-    # =========================
-    # ĐĂNG XUẤT
-    # =========================
-
-    col_logout, col_space = st.columns([1, 6])
+    col_title, col_logout = st.columns([6, 1])
 
     with col_logout:
 
         if st.button("🚪 Đăng xuất"):
 
             st.session_state.logged_in = False
+
             st.rerun()
 
 
-    # =====================================================
-    # LẤY DỮ LIỆU DATABASE
-    # =====================================================
+    # =========================
+    # LẤY DỮ LIỆU
+    # =========================
 
     try:
 
@@ -103,7 +95,7 @@ else:
 
 
         # =========================
-        # LẤY KHÁCH HÀNG
+        # LẤY DANH SÁCH KHÁCH HÀNG
         # =========================
 
         sql_khach_hang = """
@@ -144,13 +136,25 @@ else:
 
 
         # =========================
-        # LẤY LỊCH HẸN
+        # HIỂN THỊ MÃ KHÁCH HÀNG
+        # =========================
+
+        if not df_khach_hang.empty:
+
+            df_khach_hang["Mã khách hàng"] = (
+                df_khach_hang["Mã khách hàng"]
+                .apply(lambda x: f"KH{int(x):03d}")
+            )
+
+
+        # =========================
+        # LẤY DANH SÁCH LỊCH
         # =========================
 
         sql_lich = """
         SELECT
             l.ma_lich,
-            l.ma_khach_hang,
+            k.ma_khach_hang,
             k.ho_ten,
             k.so_dien_thoai,
             l.ngay_hen,
@@ -162,7 +166,7 @@ else:
         FROM lich_cham_soc l
         INNER JOIN khach_hang_tiem_nang k
         ON l.ma_khach_hang = k.ma_khach_hang
-        ORDER BY l.ngay_hen DESC, l.gio_hen DESC
+        ORDER BY l.ngay_hen ASC, l.gio_hen ASC
         """
 
         cursor.execute(sql_lich)
@@ -190,13 +194,29 @@ else:
         )
 
 
+        # =========================
+        # HIỂN THỊ MÃ KHÁCH HÀNG TRONG LỊCH
+        # =========================
+
+        if not df_lich.empty:
+
+            df_lich["Mã khách hàng"] = (
+                df_lich["Mã khách hàng"]
+                .apply(lambda x: f"KH{int(x):03d}")
+            )
+
+
+        # =========================
+        # ĐÓNG DATABASE
+        # =========================
+
         cursor.close()
         conn.close()
 
 
-        # =====================================================
+        # =========================
         # THỐNG KÊ
-        # =====================================================
+        # =========================
 
         st.divider()
 
@@ -206,6 +226,7 @@ else:
 
 
         # Tổng khách hàng
+
         col1.metric(
             "👥 Tổng khách hàng",
             len(df_khach_hang)
@@ -213,13 +234,13 @@ else:
 
 
         # Khách hàng mới
+
         if not df_khach_hang.empty:
 
             so_khach_moi = len(
                 df_khach_hang[
-                    df_khach_hang[
-                        "Loại khách hàng"
-                    ] == "Khách hàng mới"
+                    df_khach_hang["Loại khách hàng"]
+                    == "Khách hàng mới"
                 ]
             )
 
@@ -235,13 +256,13 @@ else:
 
 
         # Khách hàng cũ
+
         if not df_khach_hang.empty:
 
             so_khach_cu = len(
                 df_khach_hang[
-                    df_khach_hang[
-                        "Loại khách hàng"
-                    ] == "Khách hàng cũ"
+                    df_khach_hang["Loại khách hàng"]
+                    == "Khách hàng cũ"
                 ]
             )
 
@@ -256,16 +277,17 @@ else:
         )
 
 
-        # Tổng lịch
+        # Tổng lịch hẹn
+
         col4.metric(
-            "📅 Tổng lịch hẹn",
+            "📅 Lịch chăm sóc",
             len(df_lich)
         )
 
 
-        # =====================================================
+        # =========================
         # DANH SÁCH KHÁCH HÀNG
-        # =====================================================
+        # =========================
 
         st.divider()
 
@@ -274,38 +296,39 @@ else:
         )
 
 
-        # Tìm kiếm
-        tim_kiem = st.text_input(
-            "🔎 Tìm kiếm khách hàng",
-            placeholder="Nhập tên hoặc số điện thoại..."
-        )
+        if not df_khach_hang.empty:
+
+            # Tìm kiếm khách hàng
+            tim_kiem = st.text_input(
+                "🔎 Tìm kiếm theo tên hoặc số điện thoại"
+            )
 
 
-        df_hien_thi = df_khach_hang.copy()
+            df_hien_thi = df_khach_hang.copy()
 
 
-        if tim_kiem:
+            if tim_kiem:
 
-            df_hien_thi = df_hien_thi[
-                df_hien_thi["Họ tên"]
-                .astype(str)
-                .str.contains(
-                    tim_kiem,
-                    case=False,
-                    na=False
+                mask = (
+                    df_hien_thi["Họ tên"]
+                    .astype(str)
+                    .str.contains(
+                        tim_kiem,
+                        case=False,
+                        na=False
+                    )
+                    |
+                    df_hien_thi["Số điện thoại"]
+                    .astype(str)
+                    .str.contains(
+                        tim_kiem,
+                        case=False,
+                        na=False
+                    )
                 )
-                |
-                df_hien_thi["Số điện thoại"]
-                .astype(str)
-                .str.contains(
-                    tim_kiem,
-                    case=False,
-                    na=False
-                )
-            ]
 
+                df_hien_thi = df_hien_thi[mask]
 
-        if not df_hien_thi.empty:
 
             st.dataframe(
                 df_hien_thi,
@@ -316,52 +339,25 @@ else:
         else:
 
             st.info(
-                "Chưa tìm thấy khách hàng."
+                "📭 Chưa có khách hàng nào trong hệ thống."
             )
 
 
-        # =====================================================
+        # =========================
         # DANH SÁCH LỊCH HẸN
-        # =====================================================
+        # =========================
 
         st.divider()
 
         st.subheader(
-            "📅 Lịch chăm sóc / tái tư vấn"
+            "📅 Danh sách lịch chăm sóc / tái tư vấn"
         )
 
 
-        # Lọc trạng thái
-        trang_thai_loc = st.selectbox(
-            "Lọc theo trạng thái",
-            [
-                "Tất cả",
-                "Chưa liên hệ",
-                "Đã liên hệ",
-                "Đã tư vấn",
-                "Hẹn lại",
-                "Hoàn thành"
-            ]
-        )
-
-
-        df_lich_hien_thi = df_lich.copy()
-
-
-        if trang_thai_loc != "Tất cả":
-
-            df_lich_hien_thi = df_lich_hien_thi[
-                df_lich_hien_thi[
-                    "Trạng thái"
-                ] == trang_thai_loc
-            ]
-
-
-        # Hiển thị lịch
-        if not df_lich_hien_thi.empty:
+        if not df_lich.empty:
 
             st.dataframe(
-                df_lich_hien_thi,
+                df_lich,
                 use_container_width=True,
                 hide_index=True
             )
@@ -369,113 +365,19 @@ else:
         else:
 
             st.info(
-                "Chưa có lịch phù hợp."
+                "📭 Chưa có lịch chăm sóc nào."
             )
 
 
-        # =====================================================
-        # CẬP NHẬT TRẠNG THÁI LỊCH
-        # =====================================================
+        # =========================
+        # LÀM MỚI DỮ LIỆU
+        # =========================
 
         st.divider()
 
-        st.subheader(
-            "✏️ Cập nhật trạng thái lịch hẹn"
-        )
+        if st.button("🔄 Làm mới dữ liệu"):
 
-
-        if not df_lich.empty:
-
-            danh_sach_ma_lich = (
-                df_lich["Mã lịch"]
-                .tolist()
-            )
-
-
-            ma_lich_chon = st.selectbox(
-                "Chọn mã lịch cần cập nhật",
-                danh_sach_ma_lich
-            )
-
-
-            thong_tin_lich = df_lich[
-                df_lich["Mã lịch"]
-                == ma_lich_chon
-            ].iloc[0]
-
-
-            st.write(
-                f"**Khách hàng:** {thong_tin_lich['Họ tên']}"
-            )
-
-            st.write(
-                f"**Ngày hẹn:** {thong_tin_lich['Ngày hẹn']}"
-            )
-
-
-            trang_thai_moi = st.selectbox(
-                "Trạng thái mới",
-                [
-                    "Chưa liên hệ",
-                    "Đã liên hệ",
-                    "Đã tư vấn",
-                    "Hẹn lại",
-                    "Hoàn thành"
-                ]
-            )
-
-
-            if st.button(
-                "💾 Cập nhật trạng thái"
-            ):
-
-                try:
-
-                    conn = get_connection()
-                    cursor = conn.cursor()
-
-
-                    sql_update = """
-                    UPDATE lich_cham_soc
-                    SET trang_thai = %s
-                    WHERE ma_lich = %s
-                    """
-
-
-                    cursor.execute(
-                        sql_update,
-                        (
-                            trang_thai_moi,
-                            ma_lich_chon
-                        )
-                    )
-
-
-                    conn.commit()
-
-                    cursor.close()
-                    conn.close()
-
-
-                    st.success(
-                        "🎉 Cập nhật trạng thái thành công!"
-                    )
-
-                    st.rerun()
-
-
-                except Exception as e:
-
-                    st.error(
-                        f"❌ Lỗi khi cập nhật: {e}"
-                    )
-
-
-        else:
-
-            st.info(
-                "Chưa có lịch hẹn để cập nhật."
-            )
+            st.rerun()
 
 
     except Exception as e:
