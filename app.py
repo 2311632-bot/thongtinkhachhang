@@ -7,12 +7,12 @@ from database import get_connection
 # =========================
 
 st.set_page_config(
-    page_title="Quản lý khách hàng tiềm năng",
+    page_title="Chăm sóc khách hàng",
     page_icon="👥",
     layout="centered"
 )
 
-st.title("👥 QUẢN LÝ KHÁCH HÀNG TIỀM NĂNG")
+st.title("👥 Chăm sóc khách hàng")
 
 st.write(
     "Hệ thống tự động nhận diện khách hàng mới và khách hàng quay lại."
