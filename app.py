@@ -262,7 +262,6 @@ if st.session_state.ma_khach_hang is not None:
 
     st.subheader("👤 Thông tin khách hàng")
 
-    # Lấy thông tin mới nhất từ database
     try:
 
         conn = get_connection()
@@ -289,16 +288,19 @@ if st.session_state.ma_khach_hang is not None:
         cursor.close()
         conn.close()
 
-      if khach:
+        if khach:
 
-    st.write(f"**🆔 Mã khách hàng:** KH{khach[0]:03d}")
-    st.write(f"**👤 Họ tên:** {khach[1]}")
-    st.write(f"**📱 Số điện thoại:** {khach[2]}")
-    st.write(f"**📍 Khu vực:** {khach[3]}")
-    st.write(f"**👥 Loại khách hàng:** {khach[4]}")
-    st.write(f"**💼 Nhu cầu:** {khach[5]}")
-        st.error(f"❌ Lỗi: {e}")
+            st.write(f"**🆔 Mã khách hàng:** KH{khach[0]:03d}")
+            st.write(f"**👤 Họ tên:** {khach[1]}")
+            st.write(f"**📱 Số điện thoại:** {khach[2]}")
+            st.write(f"**📍 Khu vực:** {khach[3]}")
+            st.write(f"**👥 Loại khách hàng:** {khach[4]}")
+            st.write(f"**💼 Nhu cầu:** {khach[5]}")
+            st.write(f"**📝 Ghi chú:** {khach[6]}")
 
+    except Exception as e:
+
+        st.error(f"❌ Lỗi khi hiển thị khách hàng: {e}")
 
 # =====================================================
 # LỊCH HẸN / TÁI TƯ VẤN
