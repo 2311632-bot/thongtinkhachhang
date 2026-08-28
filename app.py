@@ -310,7 +310,7 @@ if st.session_state.ma_khach_hang is not None:
 
     st.divider()
 
-    st.subheader("📅 Lịch hẹn chăm sóc / tái tư vấn")
+    st.subheader("📅 Lịch hẹn chăm sóc / tư vấn")
 
     # ==========================================
     # LẤY DANH SÁCH LỊCH ĐÃ CÓ
